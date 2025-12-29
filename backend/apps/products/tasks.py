@@ -2,6 +2,7 @@ from celery import shared_task
 from .models import ProductVideo
 import time
 
+
 @shared_task
 def convert_video_hls(video_id):
     try:

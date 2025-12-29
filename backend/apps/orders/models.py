@@ -1,4 +1,4 @@
-from datetime import timezone
+from django.utils import timezone
 from django.db import models
 from django.conf import settings
 from apps.users.models import UserProfile
@@ -7,37 +7,41 @@ from django_fsm import FSMField, transition
 import shortuuid
 class Order(UUIDModel):
     class OrderStatus(models.TextChoices):
-        #Default status (render)
+        # Default status
         PENDING = 'PENDING', 'Chờ xác nhận'
 
-        #System status (not render)
+        # System status
         PROCESSING = 'PROCESSING', 'Đang xử lý'
         PROCESSING_SUCCESS = 'PROCESSING_SUCCESS', 'Xử lý thành công'
         PROCESSING_FAILED = 'PROCESSING_FAILED', 'Xử lý thất bại'
 
-        #System Failed need mamual check (not render)
-        MAMUAL_CHECK = 'MAMUAL_CHECK', 'Kiểm tra thủ công'
+        # System Failed need MANUAL check
+        MANUAL_CHECK = 'MANUAL_CHECK', 'Kiểm tra thủ công'
 
-        #Process completed (render)
+        # Process completed
         CONFIRMED = 'CONFIRMED', 'Đã xác nhận'
 
-        #Shipping status (render)
+        # Shipping status
         DELIVERING = 'DELIVERING', 'Đang giao hàng'
         DELIVERED = 'DELIVERED', 'Giao thành công'
 
-        #Refund status (render)
+        # Refund status
         REFUND_REQUESTED = 'REFUND_REQUESTED', 'Đã gửi yêu cầu hoàn tiền'
         REFUNDING = 'REFUNDING', 'Đang hoàn tiền'
         REFUNDED = 'REFUNDED', 'Đã hoàn tiền'
 
-        #Overal Status (render)
+        # Overall Status
         COMPLETED = 'COMPLETED', 'Hoàn thành'
         CANCELED = 'CANCELED', 'Đã hủy'
 
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     code = models.CharField(max_length=10, unique=True, editable=False)
+    
+    # FSM Field
     status = FSMField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING, protected=True)
+
+    # --- TRANSITIONS ---
 
     @transition(field=status, source=OrderStatus.PENDING, target=OrderStatus.PROCESSING)
     def start_processing(self):
@@ -47,39 +51,47 @@ class Order(UUIDModel):
     def processing_passed(self):
         self.processing_success_at = timezone.now()
 
-    @transition(field=status, source=OrderStatus.PROCESSING, target=OrderStatus.PROCESSING_FAILED)
+    @transition(field=status,
+                source=[OrderStatus.PROCESSING, OrderStatus.PENDING],
+                target=OrderStatus.PROCESSING_FAILED)
     def processing_failed(self, note=None):
         self.processing_failed_at = timezone.now()
         if note:
-            self.order_note = f"{self.order_note or ''}\nSystem: {note}"
+            # Ghi chú lỗi hệ thống vào order_note để dev xem
+            self.order_note = f"{self.order_note or ''}\n[System Error]: {note}"
 
-    @transition(field=status, source=[OrderStatus.PROCESSING_SUCCESS,
-                                    OrderStatus.MAMUAL_CHECK],
-                                    target=OrderStatus.CONFIRMED)
+    @transition(field=status, source=[OrderStatus.PROCESSING_SUCCESS, OrderStatus.MANUAL_CHECK], target=OrderStatus.CONFIRMED)
     def confirm(self):
         self.confirmed_at = timezone.now()
 
-    @transition(field=status, source=OrderStatus.PROCESSING_FAILED, target=OrderStatus.MAMUAL_CHECK)
-    def mamual_check(self):
-        self.mamual_check_at = timezone.now()
+    @transition(field=status, source=OrderStatus.PROCESSING_FAILED, target=OrderStatus.MANUAL_CHECK)
+    def manual_check(self): # Đã sửa tên hàm và target
+        self.manual_check_at = timezone.now()
     
-    @transition(field=status, source=[OrderStatus.PENDING,
-                                    OrderStatus.CONFIRMED,
-                                    OrderStatus.PROCESSING_SUCCESS,
-                                    OrderStatus.PROCESSING_FAILED,
-                                    OrderStatus.MAMUAL_CHECK],
-                                    target=OrderStatus.CANCELED)
-    def cancel(self):
+    # Cancel có thể gọi từ nhiều trạng thái, cập nhật canceled_reason
+    @transition(field=status, 
+                source=[OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING_SUCCESS, 
+                        OrderStatus.PROCESSING_FAILED, OrderStatus.MANUAL_CHECK],
+                target=OrderStatus.CANCELED)
+    def cancel(self, reason=None):
         self.canceled_at = timezone.now()
+        if reason:
+            self.canceled_reason = reason
 
     @transition(field=status, source=OrderStatus.CONFIRMED, target=OrderStatus.DELIVERING)
     def start_delivering(self):
-        self.delevering_at = timezone.now()
+        self.delivering_at = timezone.now()
 
     @transition(field=status, source=OrderStatus.DELIVERING, target=OrderStatus.DELIVERED)
     def deliver(self):
         self.delivered_at = timezone.now()
 
+    # --- Happy Path: Giao xong -> Hoàn thành (Sau 3 ngày hoặc khách bấm) ---
+    @transition(field=status, source=OrderStatus.DELIVERED, target=OrderStatus.COMPLETED)
+    def complete(self):
+        self.completed_at = timezone.now()
+
+    # --- Refund Path ---
     @transition(field=status, source=OrderStatus.DELIVERED, target=OrderStatus.REFUND_REQUESTED)
     def request_refund(self):
         self.refund_requested_at = timezone.now()
@@ -92,21 +104,19 @@ class Order(UUIDModel):
     def refund(self):
         self.refunded_at = timezone.now()
 
-    @transition(field=status, source=OrderStatus.REFUNDED, target=OrderStatus.COMPLETED)
-    def complete(self):
-        self.completed_at = timezone.now()
-
     confirmed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    
     canceled_at = models.DateTimeField(null=True, blank=True)
     canceled_reason = models.TextField(null=True, blank=True)
 
-    processing_at = models.DateTimeField(null=True,)
+    processing_at = models.DateTimeField(null=True, blank=True)
     processing_success_at = models.DateTimeField(null=True, blank=True)
     processing_failed_at = models.DateTimeField(null=True, blank=True)
-    mamual_check_at = models.DateTimeField(null=True, blank=True)
+    
+    manual_check_at = models.DateTimeField(null=True, blank=True)
 
-    delevering_at = models.DateTimeField(null=True, blank=True)
+    delivering_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
 
     refund_requested_at = models.DateTimeField(null=True, blank=True)
@@ -115,17 +125,15 @@ class Order(UUIDModel):
 
     order_note = models.TextField(blank=True, null=True)
 
+    # ... (Các field tiền nong giữ nguyên) ...
     coupon = models.ForeignKey('discounts.Coupon', on_delete=models.SET_NULL, null=True, blank=True)
     discounted_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-
     applied_customer_type = models.CharField(max_length=20, choices=UserProfile.CustomerType.choices, blank=True, null=True)
     tier_discount_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-
     subtotal_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, blank=True)
     tax_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     shipping_fee = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     final_total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, blank=True)
-    
 
     def save(self, *args, **kwargs):
         if not self.code:

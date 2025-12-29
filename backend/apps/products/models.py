@@ -29,7 +29,8 @@ class Product(UUIDModel,SeoModel):
     type = models.CharField(max_length=20, choices=ComponentType.choices, db_index=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     tax_rate = models.DecimalField(max_digits=3, decimal_places=2, default=0)
-    
+    category = models.CharField(max_length=255, blank=True, null=True)
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
@@ -56,8 +57,8 @@ class ProductVariant(UUIDModel):
             raise ValidationError({'discount_rate': 'Giảm giá không được vượt quá 100%.'})
         
     def save(self, *args, **kwargs):
-        discount_amount = self.price * (Decimal(self.discount_rate) / Decimal(100))
-        self.final_price = (self.price - discount_amount).quantize(Decimal('0.01'))
+        discount_amount = self.price * (self.discount_rate /100)
+        self.final_price = (self.price - discount_amount)
         if not self.sku:
             brand_code = self.product.brand.name[:3]
             type_code = self.product.categories.first().name[:3] if self.product.categories.exists() else "UNK"
