@@ -207,23 +207,6 @@ class DeliveryAttempt(UUIDModel):
     def __str__(self):
         return f"Lần giao #{str(self.id)[:8]} - {self.get_reason_display()}"
 
-class PaymentTransaction(UUIDModel):
-    class PaymentStatus(models.TextChoices):
-        PENDING = 'PENDING', 'Đang xử lý'
-        SUCCESS = 'SUCCESS', 'Thành công'
-        FAILED = 'FAILED', 'Thất bại'
-        REFUNDED = 'REFUNDED', 'Đã hoàn tiền'
-
-    order = models.ForeignKey(Order, related_name='transactions', on_delete=models.CASCADE)
-    payment_method = models.CharField(max_length=50)
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
-    status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
-    
-    transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    paid_at = models.DateTimeField(null=True, blank=True)
-
-    gateway_response = models.JSONField(default=dict, blank=True)
-
 class OrderItem(UUIDModel):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey('products.ProductVariant', on_delete=models.PROTECT)
