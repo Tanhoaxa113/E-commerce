@@ -1,32 +1,118 @@
+from datetime import timezone
 from django.db import models
 from django.conf import settings
 from apps.users.models import UserProfile
 from apps.core.models import UUIDModel
 from django_fsm import FSMField, transition
 import shortuuid
-
 class Order(UUIDModel):
     class OrderStatus(models.TextChoices):
+        #Default status (render)
         PENDING = 'PENDING', 'Chờ xác nhận'
+
+        #System status (not render)
         PROCESSING = 'PROCESSING', 'Đang xử lý'
         PROCESSING_SUCCESS = 'PROCESSING_SUCCESS', 'Xử lý thành công'
         PROCESSING_FAILED = 'PROCESSING_FAILED', 'Xử lý thất bại'
+
+        #System Failed need mamual check (not render)
+        MAMUAL_CHECK = 'MAMUAL_CHECK', 'Kiểm tra thủ công'
+
+        #Process completed (render)
         CONFIRMED = 'CONFIRMED', 'Đã xác nhận'
+
+        #Shipping status (render)
+        DELIVERING = 'DELIVERING', 'Đang giao hàng'
+        DELIVERED = 'DELIVERED', 'Giao thành công'
+
+        #Refund status (render)
+        REFUND_REQUESTED = 'REFUND_REQUESTED', 'Đã gửi yêu cầu hoàn tiền'
+        REFUNDING = 'REFUNDING', 'Đang hoàn tiền'
+        REFUNDED = 'REFUNDED', 'Đã hoàn tiền'
+
+        #Overal Status (render)
         COMPLETED = 'COMPLETED', 'Hoàn thành'
         CANCELED = 'CANCELED', 'Đã hủy'
+
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     code = models.CharField(max_length=10, unique=True, editable=False)
     status = FSMField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING, protected=True)
-    
+
     @transition(field=status, source=OrderStatus.PENDING, target=OrderStatus.PROCESSING)
-    def process(self):
-        self.status = self.OrderStatus.PROCESSING
-        self.save()
+    def start_processing(self):
+        self.processing_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.PROCESSING, target=OrderStatus.PROCESSING_SUCCESS)
+    def processing_passed(self):
+        self.processing_success_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.PROCESSING, target=OrderStatus.PROCESSING_FAILED)
+    def processing_failed(self, note=None):
+        self.processing_failed_at = timezone.now()
+        if note:
+            self.order_note = f"{self.order_note or ''}\nSystem: {note}"
+
+    @transition(field=status, source=[OrderStatus.PROCESSING_SUCCESS,
+                                    OrderStatus.MAMUAL_CHECK],
+                                    target=OrderStatus.CONFIRMED)
+    def confirm(self):
+        self.confirmed_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.PROCESSING_FAILED, target=OrderStatus.MAMUAL_CHECK)
+    def mamual_check(self):
+        self.mamual_check_at = timezone.now()
     
+    @transition(field=status, source=[OrderStatus.PENDING,
+                                    OrderStatus.CONFIRMED,
+                                    OrderStatus.PROCESSING_SUCCESS,
+                                    OrderStatus.PROCESSING_FAILED,
+                                    OrderStatus.MAMUAL_CHECK],
+                                    target=OrderStatus.CANCELED)
+    def cancel(self):
+        self.canceled_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.CONFIRMED, target=OrderStatus.DELIVERING)
+    def start_delivering(self):
+        self.delevering_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.DELIVERING, target=OrderStatus.DELIVERED)
+    def deliver(self):
+        self.delivered_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.DELIVERED, target=OrderStatus.REFUND_REQUESTED)
+    def request_refund(self):
+        self.refund_requested_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.REFUND_REQUESTED, target=OrderStatus.REFUNDING)
+    def start_refunding(self):
+        self.refunding_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.REFUNDING, target=OrderStatus.REFUNDED)
+    def refund(self):
+        self.refunded_at = timezone.now()
+
+    @transition(field=status, source=OrderStatus.REFUNDED, target=OrderStatus.COMPLETED)
+    def complete(self):
+        self.completed_at = timezone.now()
+
     confirmed_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     canceled_at = models.DateTimeField(null=True, blank=True)
+    canceled_reason = models.TextField(null=True, blank=True)
+
+    processing_at = models.DateTimeField(null=True,)
+    processing_success_at = models.DateTimeField(null=True, blank=True)
+    processing_failed_at = models.DateTimeField(null=True, blank=True)
+    mamual_check_at = models.DateTimeField(null=True, blank=True)
+
+    delevering_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    refund_requested_at = models.DateTimeField(null=True, blank=True)
+    refunding_at = models.DateTimeField(null=True, blank=True)
+    refunded_at = models.DateTimeField(null=True, blank=True)
+
     order_note = models.TextField(blank=True, null=True)
 
     coupon = models.ForeignKey('discounts.Coupon', on_delete=models.SET_NULL, null=True, blank=True)
@@ -157,3 +243,4 @@ class OrderItem(UUIDModel):
             self.total_line_amount = 0
             
         super().save(*args, **kwargs)
+
