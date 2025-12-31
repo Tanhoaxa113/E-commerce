@@ -11,5 +11,6 @@ urlpatterns = [
     path('login/2fa/', TwoFactorView.as_view(), name="2fa"),
     path('logout/', LogoutView.as_view(), name="logout"),
     path('token/refresh/', TokenRefreshView.as_view(), name="token_refresh")
+    
 ]
 

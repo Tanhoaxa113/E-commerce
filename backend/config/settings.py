@@ -15,6 +15,8 @@ from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
 import os
+import django.utils.translation
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +37,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv(
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -69,7 +72,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+VNPAY_TMN_CODE = config('VNPAY_TMN_CODE', default='YOUR_TMN_CODE') # Lấy từ mail VNPAY
+VNPAY_HASH_SECRET = config('VNPAY_HASH_SECRET', default='YOUR_SECRET') # Chuỗi bí mật dài ngoằng
+VNPAY_PAYMENT_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html" # URL Sandbox
+VNPAY_RETURN_URL = "http://127.0.0.1:8000/payment/vnpay-return/" # URL nhận kết quả (Localhost trước)
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -87,8 +93,9 @@ TEMPLATES = [
         },
     },
 ]
-
+ALLOWED_HOSTS = ['*']
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
@@ -100,6 +107,14 @@ DATABASES = {
             default=config('DATABASE_URL')),
         'ATOMIC_REQUESTS': True,
     }
+}
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
 }
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
 CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
