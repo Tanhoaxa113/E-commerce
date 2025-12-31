@@ -72,7 +72,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+VNPAY_TMN_CODE = config('VNPAY_TMN_CODE', default='YOUR_TMN_CODE') # Lấy từ mail VNPAY
+VNPAY_HASH_SECRET = config('VNPAY_HASH_SECRET', default='YOUR_SECRET') # Chuỗi bí mật dài ngoằng
+VNPAY_PAYMENT_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html" # URL Sandbox
+VNPAY_RETURN_URL = "http://127.0.0.1:8000/payment/vnpay-return/" # URL nhận kết quả (Localhost trước)
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [

@@ -149,7 +149,7 @@ class OrderAddress(UUIDModel):
     phone = models.CharField(max_length=20)
 
     province = models.CharField(max_length=100, blank=True, null=True)
-    district = models.CharField(max_length=100, blank=True, null=True)
+    
     ward = models.CharField(max_length=100, blank=True, null=True)
     address_line = models.TextField()
 

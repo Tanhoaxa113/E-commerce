@@ -1,57 +1,66 @@
 # payment/models.py
 from django.db import models
-from apps.core.models import UUIDModel 
+from apps.core.models import UUIDModel
+from django_fsm import FSMField, transition
+from django.utils import timezone
+
 class PaymentTransaction(UUIDModel):
     class PaymentStatus(models.TextChoices):
         PENDING = 'PENDING', 'Đang chờ thanh toán'
         SUCCESS = 'SUCCESS', 'Thanh toán thành công'
-        FAILED = 'FAILED', 'Thanh toán thất bại' # Checksum sai, hủy, hoặc lỗi ngân hàng
+        FAILED = 'FAILED', 'Thanh toán thất bại'
         REFUNDED = 'REFUNDED', 'Đã hoàn tiền'
 
     class PaymentProvider(models.TextChoices):
         VNPAY = 'VNPAY', 'Ví VNPAY'
         MOMO = 'MOMO', 'Ví MoMo'
-        COD = 'COD', 'Thanh toán khi nhận hàng' # Cash On Delivery
+        COD = 'COD', 'Thanh toán khi nhận hàng'
 
-    # Link về đơn hàng gốc
     order = models.ForeignKey(
-        'orders.Order', # Dùng string reference để tránh vòng lặp import
+        'orders.Order',
         related_name='transactions',
-        on_delete=models.PROTECT # Không cho xóa Order nếu đã có giao dịch
+        on_delete=models.PROTECT
     )
 
-    # Mã giao dịch gửi sang VNPAY/MOMO (QUAN TRỌNG NHẤT)
-    # Không dùng Order Code trực tiếp, mà phải là: OrderCode + Timestamp hoặc Random
-    # Ví dụ: ORDER_ABCXYZ_171628399
-    txn_ref = models.CharField(max_length=100, unique=True, help_text="Mã unique gửi sang cổng thanh toán")
+    txn_ref = models.CharField(max_length=100, unique=True)
 
-    # Mã giao dịch phía Ngân hàng trả về (dùng để đối soát sau này)
     provider_txn_id = models.CharField(max_length=100, blank=True, null=True)
     
     provider_code = models.CharField(
-        max_length=20, 
+        max_length=20,
         choices=PaymentProvider.choices,
         default=PaymentProvider.VNPAY
     )
 
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     
-    status = models.CharField(
-        max_length=20, 
-        choices=PaymentStatus.choices, 
+    status = FSMField(
+        max_length=20,
+        choices=PaymentStatus.choices,
         default=PaymentStatus.PENDING
     )
-
-    # Nội dung thanh toán (Order description)
+    
+    @transition(field=status, source=PaymentStatus.PENDING, target=PaymentStatus.SUCCESS)
+    def mark_success(self):
+        payment_success_at = timezone.now()
+    
+    @transition(field=status, source=PaymentStatus.PENDING, target=PaymentStatus.FAILED)
+    def mark_failed(self):
+        payment_failed_at = timezone.now()
+    @transition(field=status, source=PaymentStatus.SUCCESS, target=PaymentStatus.REFUNDED)
+    def mark_refunded(self):
+        payment_refunded_at = timezone.now()
+    
+    payment_success_at = models.DateTimeField()
+    payment_failed_at = models.DateTimeField()
+    payment_refunded_at = models.DateTimeField()
+    
     description = models.TextField(blank=True, null=True)
 
-    # Lưu JSON phản hồi thô từ Gateway để debug (Cứu tinh khi lỗi checksum!)
     raw_response = models.JSONField(default=dict, blank=True)
-    
-    # Thời gian user được chuyển tới trang thanh toán
+
     payment_url_created_at = models.DateTimeField(auto_now_add=True)
-    
-    # Thời gian nhận được phản hồi kết quả
+
     payment_processed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
