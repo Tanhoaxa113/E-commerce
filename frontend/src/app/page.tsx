@@ -3,11 +3,9 @@ import Link from 'next/link'
 import ProductCard, { Product } from '@/components/ProductCard';
 
 const dummyProducts: Product[] = [
-    { id: "1bc-022", name: "Váy Tiểu Nguyệt Cổ Trang", price: 500000, image: "url1" },
-    { id: "1bc-023", name: "Áo Thun Coder NextJS", price: 250000, image: "url2" },
-    { id: "1bc-024", name: "Bàn phím cơ chống đau tay", price: 1200000, image: "url3" },
-    { id: "1bc-025", name: "Chuột Gaming Silent", price: 450000, image: "url4" },
-    { id: "1bc-026", name: "Màn hình 4K cho dân Design", price: 8500000, image: "url5" },
+    { id: "1a", slug: "vay-da-hoi", name: "Váy Dạ Hội", price: 500000, image: "Váy đẹp." },
+    { id: "2x", slug: "ao-thun-coder", name: "Áo Thun Coder", price: 150000, image: "Mặc vào code không bao giờ bug." },
+    { id: "3f", slug: "quan-short", name: "Quần Short", price: 200000, image: "Mát mẻ cho mùa hè." },
 ];
 
 export const metadata: Metadata = {
