@@ -2,18 +2,24 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import ProductCard, { Product } from '@/components/ProductCard';
 
-const dummyProducts: Product[] = [
-    { id: "1a", slug: "vay-da-hoi", name: "Váy Dạ Hội", price: 500000, image: "Váy đẹp." },
-    { id: "2x", slug: "ao-thun-coder", name: "Áo Thun Coder", price: 150000, image: "Mặc vào code không bao giờ bug." },
-    { id: "3f", slug: "quan-short", name: "Quần Short", price: 200000, image: "Mát mẻ cho mùa hè." },
-];
-
+async function getProducts() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/`,{
+    method: "GET",
+    cache: 'no-store',
+  })
+  if (!res.ok){
+    throw new Error("Không thể lấy danh sách")
+  }
+  return res.json()
+}
 export const metadata: Metadata = {
   title: 'Trang chủ | TTG Shop',
   description: 'Đây là trang chủ',
 }
 
-export default function Home() {
+export default async function Home() {
+  const products = await getProducts();
+  console.log(products)
   return (
     <div>
         {/* Banner quảng cáo (Jumbotron) */}
@@ -27,8 +33,8 @@ export default function Home() {
         
         {/* Lưới sản phẩm (Grid) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {dummyProducts.map((item) => (
-                <ProductCard key={item.id} product={item} />
+            {products.map((product: any) => (
+              <ProductCard key={product.id} product={product} />
             ))}
         </div>
     </div>

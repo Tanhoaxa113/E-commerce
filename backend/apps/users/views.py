@@ -2,15 +2,12 @@ from .models import CustomUser, Staff
 from rest_framework import generics
 from .serializers import UserSerializer, TwoFactorSerializer, CustomTokenObtainPairSerializer
 from rest_framework.response import Response
-from rest_framework import status, response, request
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
-from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from django.http import HttpResponse
 from django.db import transaction
 from django.utils import timezone
 from .tasks import send_otp_to_email
-
+from django.db.models import Q
 class CreateUserView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
@@ -29,20 +26,23 @@ class CreateUserView(generics.CreateAPIView):
 
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    
     def post(self, request, *args, **kwargs):
+        print(request.data)
         serializer = self.get_serializer(data=request.data)
-        
+        serializer.is_valid(raise_exception=True)
         try:
             a = timezone.now()
             print("Vào khối try", a)
-            serializer.is_valid(raise_exception=True)
-            user = CustomUser.objects.get(username=request.data.get('username'))
+            
+            user = CustomUser.objects.get(Q(username=request.data.get('username')) |Q(email=request.data.get('username')))
             send_otp_to_email.delay(user.id)
             b = timezone.now() - a
             print("Kết thúc khối try",b)
             return Response({
                 "message": "Đăng nhập hợp lệ! OTP đã được gửi đến email của bạn.",
-                
+                "required_otp" : True,
+                "user_id": user.id,
             }, status=status.HTTP_200_OK)
 
         except CustomUser.DoesNotExist:
@@ -58,13 +58,28 @@ class TwoFactorView(TokenObtainPairView):
     def post(self, request, *args,):
         serializer = self.get_serializer(data = request.data)
         serializer.is_valid(raise_exception=True)
-        user = CustomUser.objects.get(username=request.data.get('username'))
+        user = CustomUser.objects.get(Q(username=request.data.get('username')) |Q(email=request.data.get('username')))
         if not user:
             return Response({"message": "Lỗi không tìm thấy user",})
         else:
-            response = Response({"message": "Đăng nhập thành công"}, status=status.HTTP_200_OK)
             access_token = serializer.validated_data.get('access')
-            response.set_cookie('access_token',access_token, max_age=None, expires=None, secure=True, httponly=True, samesite='Lax')
+            refresh_token = serializer.validated_data.get('refresh')
+            response_data = {
+                "message": "Đăng nhập thành công",
+                "refresh_token": refresh_token,
+                "user_id": user.id,
+                
+            }
+            response = Response(response_data, status=status.HTTP_200_OK)
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=True,
+                max_age=3600,
+                samesite='Lax',
+                secure=False,
+                path='/'
+            )
             return response
 
 class LogoutView(generics.GenericAPIView):

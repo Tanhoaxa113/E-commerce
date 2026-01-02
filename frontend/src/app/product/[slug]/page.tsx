@@ -13,7 +13,7 @@ const FAKE_PRODUCTS = [
     { id: "3f", slug: "quan-short", name: "Quần Short", price: 200000, description: "Mát mẻ cho mùa hè." },
 ]
 
-const ProductDetail = () => {
+const  ProductDetail = () => {
     const params = useParams(); 
     const currentSlug = params.slug; // Ví dụ: "vay-da-hoi-kim-sa"
     
@@ -23,7 +23,7 @@ const ProductDetail = () => {
     if (!product) {
         return <div>Không tìm thấy sản phẩm nào có slug là: {currentSlug}</div>
     }
-    const { addToCart } = useCartStore()
+    const { addToCart, clearCart } = useCartStore()
 
     return (
         <div className=''>
@@ -68,5 +68,3 @@ const ProductDetail = () => {
     )
 
 }
-
-export default ProductDetail
