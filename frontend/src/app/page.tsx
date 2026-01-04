@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import ProductCard, { Product } from '@/components/ProductCard';
+import ProductCard from '@/components/ProductCard';
 
 async function getProducts() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/`,{

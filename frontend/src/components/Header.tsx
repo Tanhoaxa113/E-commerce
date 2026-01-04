@@ -4,10 +4,7 @@ import React, { useState, useRef, useEffect, use} from 'react'
 import { useCartStore } from '@/store/cartStore';
 import Image from 'next/image';
 import Link from 'next/link';
-interface HeaderProps {
-    shopName: string
-}
-
+import { HeaderProps } from '@/app/types/Header';
 
 
 const Header = ({ shopName }: HeaderProps) => {
@@ -81,8 +78,12 @@ const Header = ({ shopName }: HeaderProps) => {
                         )}
                     </div>
                 )}
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold">
-                    M
+                <div className="relative h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold">
+                    <Link href="/login">
+                        <button className="relative bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 items-center justify-between px-4 top-0 z-50">
+                            Đăng Nhập
+                        </button>
+                    </Link>
                 </div>
             </div>
         </header>
