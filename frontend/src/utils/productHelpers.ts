@@ -1,4 +1,5 @@
-import { Variant } from "@/components/ProductCard";
+import { Variant } from '@/app/types/Product';
+
 
 export const getVariantPriceStats = (variants: Variant[]) => {
     if (!variants || variants.length === 0) {

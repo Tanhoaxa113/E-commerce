@@ -3,8 +3,9 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-
+import { useAuthStore } from "@/store/authStore"
 const LoginPage = () => {
+    const setAuth = useAuthStore((state) => state.setAuth )
     const router = useRouter()
     const [step, setStep] = useState<1 | 2>(1)
     const [formData, setFormData] = useState({
@@ -78,7 +79,8 @@ const LoginPage = () => {
     }
     const finishLogin = (response: any) => {
         localStorage.setItem('refreshToken', response.refresh_token);
-        alert("Đăng nhập thành công mỹ mãn!");
+        console.log(response)
+        setAuth(response.data);
         router.push('/');
     }
     return (
@@ -92,8 +94,6 @@ const LoginPage = () => {
                     {error}
                 </div>
             )}
-
-            {/* --- GIAO DIỆN BƯỚC 1: LOGIN --- */}
             {step === 1 && (
                 <form onSubmit={handleLoginStep1} className="space-y-4">
                     <div>
@@ -125,7 +125,6 @@ const LoginPage = () => {
                 </form>
             )}
 
-            {/* --- GIAO DIỆN BƯỚC 2: OTP --- */}
             {step === 2 && (
                 <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in-up">
                     <div className="text-center text-sm text-gray-500 mb-4">
@@ -151,7 +150,7 @@ const LoginPage = () => {
 
                     <button
                         type="button"
-                        onClick={() => setStep(1)} // Nút quay lại nếu nhập sai email
+                        onClick={() => setStep(1)} 
                         className="w-full text-gray-500 text-sm hover:underline mt-2"
                     >
                         Quay lại đăng nhập

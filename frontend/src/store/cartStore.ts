@@ -1,27 +1,18 @@
 import { create } from "zustand";
-import { Product } from "@/components/ProductCard";
+import { Variant } from "@/app/types/Product";
+import { CartItem } from "@/app/types/Cart";
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-export interface CartItem {
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    quantity: number;
-}
 
 interface CartState {
     cart: CartItem[];
     totalItems: number;
 
-    addToCart: (product: Product) => void;
-    removeFromCart: (productId: string) => void;
-    decreaseQuantity: (productId: string) => void;
+    addToCart: (variant: Variant) => void;
+    removeFromCart: (variantId: string) => void;
+    decreaseQuantity: (variantId: string) => void;
     clearCart: () => void;
 
-}
-export interface CartItem extends Product {
-    quantity: number;
 }
 
 export const useCartStore = create<CartState>()(
@@ -30,19 +21,19 @@ export const useCartStore = create<CartState>()(
             cart: [],
             totalItems: 0,
 
-            addToCart: (product: Product) => set((state) => {
-                const existingItem = state.cart.find(item => item.id === product.id);
+            addToCart: (variant: Variant) => set((state) => {
+                const existingItem = state.cart.find(item => item.id === variant.id);
                 let newCart;
 
                 if (existingItem) {
                     newCart = state.cart.map(item =>
-                        item.id === product.id
+                        item.id === variant.id
                             ? { ...item, quantity: item.quantity + 1 }
                             : item
                     );
                 } else {
 
-                    newCart = [...state.cart, { ...product, quantity: 1 }];
+                    newCart = [...state.cart, { ...variant, quantity: 1 }];
                 }
 
                 return {
@@ -56,9 +47,9 @@ export const useCartStore = create<CartState>()(
                 totalItems: state.totalItems - 1
             })),
 
-            decreaseQuantity: (productId: string) => set((state) => {
+            decreaseQuantity: (variantId: string) => set((state) => {
                 const newCart = state.cart.map(item => {
-                    if (item.id === productId) {
+                    if (item.id === variantId) {
                         // Logic chặn số âm: Nếu lớn hơn 1 mới cho trừ
                         if (item.quantity > 1) {
                             return { ...item, quantity: item.quantity - 1 };
