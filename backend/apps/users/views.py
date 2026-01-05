@@ -2,6 +2,7 @@ from .models import CustomUser, Staff
 from rest_framework import generics
 from .serializers import UserSerializer, TwoFactorSerializer, CustomTokenObtainPairSerializer
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.db import transaction

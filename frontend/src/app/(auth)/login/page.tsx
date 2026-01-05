@@ -35,6 +35,7 @@ const LoginPage = () => {
                     username: formData.username,
                     password: formData.password
                 }),
+                credentials: 'include',
             })
             const response = await res.json()
             if (!res.ok) throw new Error(response.message || 'Sai tài khoản/mật khẩu!');
@@ -63,6 +64,7 @@ const LoginPage = () => {
                     username: formData.username,
                     password: formData.password
                 }),
+                credentials: 'include'
                 
             })
             const response = await res.json()

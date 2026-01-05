@@ -93,7 +93,6 @@ TEMPLATES = [
         },
     },
 ]
-ALLOWED_HOSTS = ['*']
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
