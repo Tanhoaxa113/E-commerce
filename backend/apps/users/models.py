@@ -30,7 +30,7 @@ class UserProfile(UUIDModel):
         GOLD = 'GOLD', 'Gold'
         PLATINUM = 'PLATINUM', 'Platinum'
         DIAMOND = 'DIAMOND', 'Diamond'
-
+    gender = models.CharField(max_length=10, blank=True, null=True)
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
     phone_number = models.CharField(max_length=10, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
@@ -45,7 +45,7 @@ class UserProfile(UUIDModel):
         return f"Profile of {self.user.username}"
 
 class Staff(UUIDModel):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='staff')
     position = models.CharField(blank=True, null=True, max_length=100)
     hire_date = models.DateField(blank=True,null=True, default=timezone.now)
     work_address = models.TextField(blank=True, null=True)

@@ -1,7 +1,7 @@
 from .models import *
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
+from django.db.models import Q
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
@@ -28,13 +28,14 @@ class TwoFactorSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         username = attrs.get('username')
+        email = attrs.get('username')
         otp = attrs.get('otp')
 
         if not username or not otp:
             raise serializers.ValidationError("Phải cung cấp tên người dùng và OTP.")
 
         try:
-            user = CustomUser.objects.get(username=username)
+            user = CustomUser.objects.get(Q(email=email) | Q( username=username))
         except CustomUser.DoesNotExist:
             raise serializers.ValidationError("Người dùng không tồn tại.")
 
