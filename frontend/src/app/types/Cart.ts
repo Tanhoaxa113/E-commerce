@@ -3,8 +3,9 @@ import { Variant } from "@/app/types/Product";
 export interface CartItem {
     id: string
     sku: string
-    price: string
-    final_price: string
+    name: string
+    price: number
+    final_price: number
     discount_rate: number
     variant_specs: any
 }

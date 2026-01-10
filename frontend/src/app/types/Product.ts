@@ -25,8 +25,8 @@ export interface Comment {
 export interface Variant {
     id: string
     sku: string
-    price: string
-    final_price: string
+    price: number
+    final_price: number
     discount_rate: number
     variant_specs: any
 
